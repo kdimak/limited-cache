@@ -1,62 +1,45 @@
 import java.util.HashMap;
 import java.util.Map;
 
-public class LimitedCache {
-
+public class LimitedCache extends CacheObservable {
     private int capacity;
-    private Map<String, String> values = new HashMap<String, String>();
-    private Map<String, Integer> visited = new HashMap<String, Integer>();
-
-    private CacheClearanceStrategy strategy = new CacheClearanceStrategy() {
-        public String guessElementToDrop() {
-            String keyToRemove = null;
-            int minimumVisits = Integer.MAX_VALUE;
-            for (Map.Entry<String, Integer> visitedEntry : visited.entrySet()) {
-                int visitsCount = visitedEntry.getValue();
-                if (minimumVisits > visitsCount) {
-                    minimumVisits = visitsCount;
-                    keyToRemove = visitedEntry.getKey();
-                }
-            }
-            return keyToRemove;
-        }
-    };
+    private Map<String, String> content = new HashMap<>();
+    private CacheClearanceStrategy strategy = new DropLessUsedCacheClearanceStrategy(this);
 
     public LimitedCache(int capacity) {
         this.capacity = capacity;
     }
 
+    public void setStrategy(CacheClearanceStrategy strategy) {
+        this.strategy = strategy;
+    }
+
     public void put(String key, String value) {
-        if (!values.containsKey(key)) {
-            if (isFull()) {
-                dropLessVisitedElement();
-            }
+        if (isNewElement(key) && isFull()) {
+            dropTheLeastVisitedElement();
         }
-        values.put(key, value);
-        visited.put(key, 0);
+        content.put(key, value);
+        notifyElementIsPut(key, value);
     }
 
     public String get(String key) {
-        if (values.containsKey(key)) {
-            visited(key);
-            return values.get(key);
+        if (content.containsKey(key)) {
+            notifyElementIsGet(key);
+            return content.get(key);
         }
         return null;
     }
 
-    private void visited(String key) {
-        Integer visitsCount = visited.get(key);
-        visited.put(key, visitsCount + 1);
+    private boolean isNewElement(String key) {
+        return !content.containsKey(key);
     }
 
-    public boolean isFull() {
-        return values.size() == capacity;
+    private boolean isFull() {
+        return content.size() == capacity;
     }
 
-    private void dropLessVisitedElement() {
+    private void dropTheLeastVisitedElement() {
         String keyToRemove = strategy.guessElementToDrop();
-        values.remove(keyToRemove);
-        visited.remove(keyToRemove);
+        content.remove(keyToRemove);
     }
-
 }
