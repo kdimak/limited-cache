@@ -7,6 +7,21 @@ public class LimitedCache {
     private Map<String, String> values = new HashMap<String, String>();
     private Map<String, Integer> visited = new HashMap<String, Integer>();
 
+    private CacheClearanceStrategy strategy = new CacheClearanceStrategy() {
+        public String guessElementToDrop() {
+            String keyToRemove = null;
+            int minimumVisits = Integer.MAX_VALUE;
+            for (Map.Entry<String, Integer> visitedEntry : visited.entrySet()) {
+                int visitsCount = visitedEntry.getValue();
+                if (minimumVisits > visitsCount) {
+                    minimumVisits = visitsCount;
+                    keyToRemove = visitedEntry.getKey();
+                }
+            }
+            return keyToRemove;
+        }
+    };
+
     public LimitedCache(int capacity) {
         this.capacity = capacity;
     }
@@ -39,15 +54,7 @@ public class LimitedCache {
     }
 
     private void dropLessVisitedElement() {
-        String keyToRemove = null;
-        int minimumVisits = Integer.MAX_VALUE;
-        for (Map.Entry<String, Integer> visitedEntry : visited.entrySet()) {
-            int visitsCount = visitedEntry.getValue();
-            if (minimumVisits > visitsCount) {
-                minimumVisits = visitsCount;
-                keyToRemove = visitedEntry.getKey();
-            }
-        }
+        String keyToRemove = strategy.guessElementToDrop();
         values.remove(keyToRemove);
         visited.remove(keyToRemove);
     }
